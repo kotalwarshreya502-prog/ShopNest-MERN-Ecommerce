@@ -5,51 +5,87 @@ import { ArrowRight } from "lucide-react";
 const CATEGORIES = [
   {
     name: "Electronics",
-    description: "Audio, Gadgets & Accessories",
-    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500",
-    itemCount: "120+ Products",
+    slug: "electronics",
+    description: "Pro Audio, Cameras & Wireless Tech",
+    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80",
+    itemCount: "7+ Products",
+  },
+  {
+    name: "Mobiles & Accessories",
+    slug: "mobiles-accessories",
+    description: "Flagship 5G Phones & Fast Chargers",
+    image: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600&auto=format&fit=crop&q=80",
+    itemCount: "5+ Products",
+  },
+  {
+    name: "Laptops & Computers",
+    slug: "laptops-computers",
+    description: "Ultrabooks, Keyboards & 4K Displays",
+    image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600&auto=format&fit=crop&q=80",
+    itemCount: "5+ Products",
+  },
+  {
+    name: "Gaming",
+    slug: "gaming",
+    description: "Consoles, Controllers & Headsets",
+    image: "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=600&auto=format&fit=crop&q=80",
+    itemCount: "4+ Products",
   },
   {
     name: "Fashion",
-    description: "Trending Apparel & Styles",
-    image: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=500",
-    itemCount: "250+ Products",
+    slug: "fashion",
+    description: "Denim, Dresses, Suits & Ethnic Wear",
+    image: "https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=600&auto=format&fit=crop&q=80",
+    itemCount: "20+ Products",
   },
   {
     name: "Footwear",
-    description: "Sneakers, Formals & Casuals",
-    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500",
-    itemCount: "95+ Products",
+    slug: "footwear",
+    description: "Sneakers, Boots & Leather Formals",
+    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80",
+    itemCount: "13+ Products",
+  },
+  {
+    name: "Watches",
+    slug: "watches",
+    description: "Chronographs & Smartwatches",
+    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80",
+    itemCount: "3+ Products",
   },
   {
     name: "Accessories",
-    description: "Watches, Bags & Eyewear",
-    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500",
-    itemCount: "80+ Products",
+    slug: "accessories",
+    description: "Wallets, Bags, Belts & Sunglasses",
+    image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&auto=format&fit=crop&q=80",
+    itemCount: "17+ Products",
   },
   {
     name: "Home & Living",
-    description: "Modern Decor & Essentials",
-    image: "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=500",
-    itemCount: "60+ Products",
+    slug: "home-living",
+    description: "Modern Furniture, Decor & Bedding",
+    image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&auto=format&fit=crop&q=80",
+    itemCount: "13+ Products",
+  },
+  {
+    name: "Kitchen Products",
+    slug: "kitchen-products",
+    description: "Air Fryers, Espresso & Cookware",
+    image: "https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?w=600&auto=format&fit=crop&q=80",
+    itemCount: "4+ Products",
   },
   {
     name: "Beauty",
-    description: "Skincare, Fragrances & Care",
-    image: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=500",
-    itemCount: "70+ Products",
+    slug: "beauty",
+    description: "Facial Serums, Cleansers & Perfumes",
+    image: "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&auto=format&fit=crop&q=80",
+    itemCount: "4+ Products",
   },
   {
-    name: "Sports",
-    description: "Fitness Gear & Athleisure",
-    image: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=500",
-    itemCount: "45+ Products",
-  },
-  {
-    name: "Books",
-    description: "Bestsellers, Fiction & Tech",
-    image: "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=500",
-    itemCount: "110+ Products",
+    name: "Sports & Fitness",
+    slug: "sports",
+    description: "Yoga Mats, Dumbbells & Gear",
+    image: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=600&auto=format&fit=crop&q=80",
+    itemCount: "4+ Products",
   },
 ];
 
@@ -70,7 +106,7 @@ export default function CategoryGrid() {
         {CATEGORIES.map((cat) => (
           <Link
             key={cat.name}
-            to={`/shop?category=${encodeURIComponent(cat.name)}`}
+            to={`/category/${cat.slug}`}
             className="category-card"
           >
             <div className="category-image-wrap">
@@ -80,7 +116,7 @@ export default function CategoryGrid() {
                 loading="lazy"
                 onError={(e) => {
                   e.currentTarget.src =
-                    "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500";
+                    "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600";
                 }}
               />
               <div className="category-overlay">

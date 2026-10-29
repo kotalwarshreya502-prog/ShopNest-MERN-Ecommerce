@@ -33,8 +33,8 @@ export default function Register() {
 
     try {
       const response = await api.post("/auth/register", {
-        name,
-        email,
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
         password,
       });
 

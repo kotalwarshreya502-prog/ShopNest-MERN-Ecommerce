@@ -23,7 +23,8 @@ const registerUser = async (req, res) => {
       });
     }
 
-    const userExists = await User.findOne({ email: email.toLowerCase() });
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const userExists = await User.findOne({ email: normalizedEmail });
     if (userExists) {
       return res.status(400).json({
         success: false,
@@ -32,10 +33,10 @@ const registerUser = async (req, res) => {
     }
 
     const user = await User.create({
-      name,
-      email: email.toLowerCase(),
+      name: String(name).trim(),
+      email: normalizedEmail,
       password,
-      role: email.toLowerCase().includes("admin@") ? "admin" : "customer",
+      role: normalizedEmail.includes("admin@") ? "admin" : "customer",
     });
 
     const token = generateToken(user._id);
@@ -75,7 +76,8 @@ const loginUser = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() }).select("+password");
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail }).select("+password");
 
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({
@@ -277,7 +279,11 @@ const toggleWishlist = async (req, res) => {
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
       return res.status(404).json({

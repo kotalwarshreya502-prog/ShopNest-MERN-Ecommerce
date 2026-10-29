@@ -7,13 +7,22 @@ const connectDB = async () => {
   if (primaryUri) {
     try {
       const conn = await mongoose.connect(primaryUri, {
-        serverSelectionTimeoutMS: 5000,
+        serverSelectionTimeoutMS: 10000,
       });
-      console.log(`MongoDB connected: ${conn.connection.host}`);
+      console.log(`✅ MongoDB connected: ${conn.connection.host}`);
       return;
     } catch (error) {
-      console.warn(`Primary MongoDB connection failed (${error.message}). Attempting local fallback...`);
+      console.error(`\n❌ [DATABASE CONNECTION ERROR]: ${error.message}`);
+      console.error("👉 Tip: In MongoDB Atlas, verify that Network Access has IP 0.0.0.0/0 enabled (required for Render cloud instances).");
+      if (process.env.NODE_ENV === "production") {
+        process.exit(1);
+      }
+      console.warn("Attempting local MongoDB fallback for development...");
     }
+  } else if (process.env.NODE_ENV === "production") {
+    console.error("\n❌ [DEPLOYMENT ERROR] MONGO_URI environment variable is missing!");
+    console.error("👉 Go to Render Dashboard -> shopnest-backend -> Environment tab -> Add MONGO_URI with your MongoDB Atlas connection string.\n");
+    process.exit(1);
   }
 
   try {
@@ -23,7 +32,6 @@ const connectDB = async () => {
     console.log(`Connected to local MongoDB fallback: ${conn.connection.host}/shopnest`);
   } catch (localError) {
     console.error("MongoDB connection failed for both primary and local instances:", localError.message);
-    console.error("Tip: If using MongoDB Atlas, ensure your current IP address is added to Atlas Network Access (0.0.0.0/0 for development).");
     process.exit(1);
   }
 };

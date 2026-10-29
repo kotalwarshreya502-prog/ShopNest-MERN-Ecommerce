@@ -1,16 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
-  Search,
-  ShoppingBag,
-  Heart,
-  User,
-  Menu,
-  X,
-  ChevronDown,
-  LogOut,
-  Shield,
-  Package,
+  Search, ShoppingBag, Heart, User, Menu, X,
+  ChevronDown, LogOut, Shield, Package,
+  Zap, TrendingUp, Award,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
@@ -18,16 +11,20 @@ import { useWishlist } from "../../context/WishlistContext";
 import AnnouncementBar from "./AnnouncementBar";
 
 const CATEGORIES = [
-  "Electronics",
-  "Fashion",
-  "Men",
-  "Women",
-  "Home & Living",
-  "Beauty",
-  "Accessories",
-  "Footwear",
-  "Sports",
-  "Books",
+  { label: "Electronics", slug: "electronics", icon: "🔌" },
+  { label: "Mobiles", slug: "mobiles-accessories", icon: "📱" },
+  { label: "Laptops", slug: "laptops-computers", icon: "💻" },
+  { label: "Gaming", slug: "gaming", icon: "🎮" },
+  { label: "Fashion", slug: "fashion", icon: "👗" },
+  { label: "Footwear", slug: "footwear", icon: "👟" },
+  { label: "Watches", slug: "watches", icon: "⌚" },
+  { label: "Accessories", slug: "accessories", icon: "👜" },
+  { label: "Home & Living", slug: "home-living", icon: "🏠" },
+  { label: "Kitchen", slug: "kitchen-products", icon: "🍳" },
+  { label: "Beauty", slug: "beauty", icon: "✨" },
+  { label: "Sports", slug: "sports", icon: "🏋️" },
+  { label: "Books", slug: "books", icon: "📚" },
+  { label: "Toys & Lifestyle", slug: "toys-lifestyle", icon: "🧸" },
 ];
 
 export default function Navbar() {
@@ -40,6 +37,23 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const userDropdownRef = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(e.target)) {
+        setUserDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -55,6 +69,10 @@ export default function Navbar() {
     navigate("/");
   };
 
+  const isCatActive = (slug) =>
+    location.pathname === `/category/${slug}` ||
+    location.search.includes(`category=${encodeURIComponent(CATEGORIES.find((c) => c.slug === slug)?.label || "")}`);
+
   return (
     <>
       <AnnouncementBar />
@@ -66,6 +84,7 @@ export default function Navbar() {
             className="mobile-menu-toggle"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -77,105 +96,93 @@ export default function Navbar() {
           </Link>
 
           {/* Search bar */}
-          <form className="navbar-search" onSubmit={handleSearchSubmit}>
+          <form className="navbar-search" onSubmit={handleSearchSubmit} role="search">
             <div className="search-input-wrapper">
               <Search size={18} className="search-icon" />
               <input
-                type="text"
-                placeholder="Search for smartphones, sneakers, watches, brands..."
+                type="search"
+                placeholder="Search for products, brands, categories…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Search products"
               />
               {searchQuery && (
                 <button
                   type="button"
                   className="search-clear-btn"
                   onClick={() => setSearchQuery("")}
+                  aria-label="Clear search"
                 >
                   <X size={14} />
                 </button>
               )}
             </div>
-            <button type="submit" className="search-submit-btn">
-              Search
-            </button>
+            <button type="submit" className="search-submit-btn">Search</button>
           </form>
 
           {/* Header Actions */}
           <div className="header-actions">
             {/* Wishlist */}
-            <Link to="/wishlist" className="action-item" title="Wishlist">
+            <Link to="/wishlist" className="action-item" title="Wishlist" aria-label={`Wishlist (${wishlistCount} items)`}>
               <div className="icon-badge-wrapper">
                 <Heart size={22} />
-                {wishlistCount > 0 && (
-                  <span className="badge-count wishlist-badge">{wishlistCount}</span>
-                )}
+                {wishlistCount > 0 && <span className="badge-count wishlist-badge">{wishlistCount}</span>}
               </div>
               <span className="action-label">Wishlist</span>
             </Link>
 
             {/* Cart */}
-            <Link to="/cart" className="action-item" title="Shopping Cart">
+            <Link to="/cart" className="action-item" title="Shopping Cart" aria-label={`Cart (${totalItemsCount} items)`}>
               <div className="icon-badge-wrapper">
                 <ShoppingBag size={22} />
-                {totalItemsCount > 0 && (
-                  <span className="badge-count cart-badge">{totalItemsCount}</span>
-                )}
+                {totalItemsCount > 0 && <span className="badge-count cart-badge">{totalItemsCount}</span>}
               </div>
               <span className="action-label">Cart</span>
             </Link>
 
             {/* Account / User Menu */}
-            <div className="user-menu-container">
+            <div className="user-menu-container" ref={userDropdownRef}>
               {isAuthenticated ? (
                 <div className="user-dropdown-wrapper">
                   <button
                     className="user-btn logged-in"
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                     aria-expanded={userDropdownOpen}
+                    aria-haspopup="true"
                   >
                     <div className="user-avatar-initial">
-                      {user.name ? user.name[0].toUpperCase() : "U"}
+                      {user?.name ? user.name[0].toUpperCase() : "U"}
                     </div>
                     <div className="user-name-role">
-                      <span className="user-name">{user.name.split(" ")[0]}</span>
-                      <small className="user-role">{user.role || "Customer"}</small>
+                      <span className="user-name">{user?.name?.split(" ")[0]}</span>
+                      <small className="user-role">{user?.role || "Customer"}</small>
                     </div>
                     <ChevronDown size={14} />
                   </button>
 
                   {userDropdownOpen && (
-                    <div className="user-dropdown-menu">
+                    <div className="user-dropdown-menu" role="menu">
                       <div className="dropdown-user-info">
-                        <strong>{user.name}</strong>
-                        <span>{user.email}</span>
+                        <strong>{user?.name}</strong>
+                        <span>{user?.email}</span>
                       </div>
-                      <div className="dropdown-divider"></div>
-                      <Link
-                        to="/profile"
-                        onClick={() => setUserDropdownOpen(false)}
-                        className="dropdown-link"
-                      >
+                      <div className="dropdown-divider" />
+                      <Link to="/profile" onClick={() => setUserDropdownOpen(false)} className="dropdown-link" role="menuitem">
                         <User size={16} /> My Profile
                       </Link>
-                      <Link
-                        to="/orders"
-                        onClick={() => setUserDropdownOpen(false)}
-                        className="dropdown-link"
-                      >
+                      <Link to="/orders" onClick={() => setUserDropdownOpen(false)} className="dropdown-link" role="menuitem">
                         <Package size={16} /> My Orders
                       </Link>
+                      <Link to="/wishlist" onClick={() => setUserDropdownOpen(false)} className="dropdown-link" role="menuitem">
+                        <Heart size={16} /> Wishlist {wishlistCount > 0 && `(${wishlistCount})`}
+                      </Link>
                       {isAdmin && (
-                        <Link
-                          to="/admin"
-                          onClick={() => setUserDropdownOpen(false)}
-                          className="dropdown-link admin-link"
-                        >
+                        <Link to="/admin" onClick={() => setUserDropdownOpen(false)} className="dropdown-link admin-link" role="menuitem">
                           <Shield size={16} /> Admin Dashboard
                         </Link>
                       )}
-                      <div className="dropdown-divider"></div>
-                      <button onClick={handleLogout} className="dropdown-link logout-btn">
+                      <div className="dropdown-divider" />
+                      <button onClick={handleLogout} className="dropdown-link logout-btn" role="menuitem">
                         <LogOut size={16} /> Sign out
                       </button>
                     </div>
@@ -183,12 +190,8 @@ export default function Navbar() {
                 </div>
               ) : (
                 <div className="auth-buttons">
-                  <Link to="/login" className="btn-nav-login">
-                    Sign in
-                  </Link>
-                  <Link to="/register" className="btn-nav-register">
-                    Join
-                  </Link>
+                  <Link to="/login" className="btn-nav-login">Sign in</Link>
+                  <Link to="/register" className="btn-nav-register">Join</Link>
                 </div>
               )}
             </div>
@@ -196,48 +199,42 @@ export default function Navbar() {
         </div>
 
         {/* Category Navigation Bar */}
-        <nav className="category-navbar">
+        <nav className="category-navbar" aria-label="Product categories">
           <div className="category-scroll-container">
-            <Link
-              to="/shop"
-              className={`cat-nav-link ${location.pathname === "/shop" && !location.search ? "active" : ""}`}
-            >
+            <Link to="/shop" className={`cat-nav-link ${location.pathname === "/shop" && !location.search ? "active" : ""}`}>
               All Products
             </Link>
-            <Link
-              to="/deals"
-              className={`cat-nav-link deals-link ${location.pathname === "/deals" ? "active" : ""}`}
-            >
-              ⚡ Deals & Offers
+            <Link to="/deals" className={`cat-nav-link deals-link ${location.pathname === "/deals" ? "active" : ""}`}>
+              ⚡ Deals
             </Link>
-            {CATEGORIES.map((cat) => {
-              const isActive = location.search.includes(`category=${encodeURIComponent(cat)}`);
-              return (
-                <Link
-                  key={cat}
-                  to={`/shop?category=${encodeURIComponent(cat)}`}
-                  className={`cat-nav-link ${isActive ? "active" : ""}`}
-                >
-                  {cat}
-                </Link>
-              );
-            })}
+            <Link to="/new-arrivals" className={`cat-nav-link ${location.pathname === "/new-arrivals" ? "active" : ""}`}>
+              <TrendingUp size={13} style={{ verticalAlign: "middle", marginRight: 3 }} />New
+            </Link>
+            <Link to="/best-sellers" className={`cat-nav-link ${location.pathname === "/best-sellers" ? "active" : ""}`}>
+              <Award size={13} style={{ verticalAlign: "middle", marginRight: 3 }} />Best Sellers
+            </Link>
+            <span className="cat-nav-divider" aria-hidden="true">|</span>
+            {CATEGORIES.map((cat) => (
+              <Link
+                key={cat.slug}
+                to={`/category/${cat.slug}`}
+                className={`cat-nav-link ${isCatActive(cat.slug) ? "active" : ""}`}
+              >
+                {cat.icon} {cat.label}
+              </Link>
+            ))}
           </div>
         </nav>
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
           <div className="mobile-drawer-overlay" onClick={() => setMobileMenuOpen(false)}>
-            <div className="mobile-drawer" onClick={(e) => e.stopPropagation()}>
+            <div className="mobile-drawer" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Navigation menu">
               <div className="drawer-header">
                 <Link to="/" className="brand-logo" onClick={() => setMobileMenuOpen(false)}>
                   shop<span className="brand-accent">nest</span>.
                 </Link>
-                <button
-                  className="drawer-close"
-                  onClick={() => setMobileMenuOpen(false)}
-                  aria-label="Close menu"
-                >
+                <button className="drawer-close" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">
                   <X size={22} />
                 </button>
               </div>
@@ -246,73 +243,61 @@ export default function Navbar() {
               <form className="drawer-search" onSubmit={handleSearchSubmit}>
                 <Search size={16} />
                 <input
-                  type="text"
-                  placeholder="Search products..."
+                  type="search"
+                  placeholder="Search products…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </form>
 
-              {/* Drawer Links */}
               <div className="drawer-nav-sections">
+                {/* Special links */}
                 <div className="drawer-group">
-                  <span className="drawer-group-title">Navigation</span>
-                  <Link to="/" onClick={() => setMobileMenuOpen(false)}>
-                    Home
-                  </Link>
-                  <Link to="/shop" onClick={() => setMobileMenuOpen(false)}>
-                    Shop All Products
-                  </Link>
-                  <Link to="/deals" onClick={() => setMobileMenuOpen(false)}>
-                    ⚡ Today's Deals
-                  </Link>
+                  <span className="drawer-group-title">Highlights</span>
+                  <Link to="/">🏠 Home</Link>
+                  <Link to="/shop">🛍️ All Products</Link>
+                  <Link to="/deals">⚡ Today's Deals</Link>
+                  <Link to="/new-arrivals">🆕 New Arrivals</Link>
+                  <Link to="/best-sellers">🏆 Best Sellers</Link>
                 </div>
 
+                {/* Categories */}
                 <div className="drawer-group">
-                  <span className="drawer-group-title">Categories</span>
+                  <span className="drawer-group-title">Shop by Category</span>
                   {CATEGORIES.map((cat) => (
-                    <Link
-                      key={cat}
-                      to={`/shop?category=${encodeURIComponent(cat)}`}
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      {cat}
+                    <Link key={cat.slug} to={`/category/${cat.slug}`}>
+                      {cat.icon} {cat.label}
                     </Link>
                   ))}
                 </div>
 
+                {/* Account */}
                 <div className="drawer-group">
-                  <span className="drawer-group-title">Account & Orders</span>
+                  <span className="drawer-group-title">Account &amp; Orders</span>
                   {isAuthenticated ? (
                     <>
-                      <Link to="/profile" onClick={() => setMobileMenuOpen(false)}>
-                        My Profile
-                      </Link>
-                      <Link to="/orders" onClick={() => setMobileMenuOpen(false)}>
-                        My Orders
-                      </Link>
-                      <Link to="/wishlist" onClick={() => setMobileMenuOpen(false)}>
-                        Wishlist ({wishlistCount})
-                      </Link>
-                      {isAdmin && (
-                        <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>
-                          Admin Dashboard
-                        </Link>
-                      )}
-                      <button onClick={handleLogout} className="drawer-logout">
-                        Sign Out
-                      </button>
+                      <Link to="/profile">👤 My Profile</Link>
+                      <Link to="/orders">📦 My Orders</Link>
+                      <Link to="/wishlist">❤️ Wishlist ({wishlistCount})</Link>
+                      <Link to="/cart">🛒 Cart ({totalItemsCount})</Link>
+                      {isAdmin && <Link to="/admin">🛡️ Admin Dashboard</Link>}
+                      <button onClick={handleLogout} className="drawer-logout">Sign Out</button>
                     </>
                   ) : (
                     <>
-                      <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                        Sign In
-                      </Link>
-                      <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
-                        Create Account
-                      </Link>
+                      <Link to="/login">Sign In</Link>
+                      <Link to="/register">Create Account</Link>
                     </>
                   )}
+                </div>
+
+                {/* Info */}
+                <div className="drawer-group">
+                  <span className="drawer-group-title">Info</span>
+                  <Link to="/about">About ShopNest</Link>
+                  <Link to="/contact">Contact &amp; Support</Link>
+                  <Link to="/privacy-policy">Privacy Policy</Link>
+                  <Link to="/terms">Terms &amp; Conditions</Link>
                 </div>
               </div>
             </div>

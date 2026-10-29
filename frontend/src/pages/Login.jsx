@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Mail, Lock, ArrowRight, AlertCircle, Sparkles } from "lucide-react";
+import { Mail, Lock, ArrowRight, AlertCircle, Sparkles, Eye, EyeOff, ShieldCheck, UserCheck } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 
@@ -11,14 +11,17 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [activeDemo, setActiveDemo] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const redirectPath = location.state?.from?.pathname || "/";
 
-  const handleQuickFill = (demoEmail, demoPass) => {
+  const handleQuickFill = (demoEmail, demoPass, type) => {
     setEmail(demoEmail);
     setPassword(demoPass);
+    setActiveDemo(type);
     setError("");
   };
 
@@ -27,8 +30,14 @@ export default function Login() {
     setError("");
     setLoading(true);
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     try {
-      const response = await api.post("/auth/login", { email, password });
+      const response = await api.post("/auth/login", {
+        email: normalizedEmail,
+        password,
+      });
+
       if (response.data.success) {
         login(response.data.user, response.data.token);
         navigate(redirectPath, { replace: true });
@@ -62,18 +71,22 @@ export default function Login() {
           <div className="demo-buttons-row">
             <button
               type="button"
-              className="btn-demo-fill"
-              onClick={() => handleQuickFill("admin@shopnest.com", "Admin@123456")}
+              className={`btn-demo-fill ${activeDemo === "admin" ? "active" : ""}`}
+              onClick={() => handleQuickFill("admin@shopnest.com", "Admin@123456", "admin")}
             >
-              Demo Admin
+              <ShieldCheck size={14} /> Demo Admin
             </button>
             <button
               type="button"
-              className="btn-demo-fill"
-              onClick={() => handleQuickFill("customer@shopnest.com", "Customer@123456")}
+              className={`btn-demo-fill ${activeDemo === "customer" ? "active" : ""}`}
+              onClick={() => handleQuickFill("customer@shopnest.com", "Customer@123456", "customer")}
             >
-              Demo Customer
+              <UserCheck size={14} /> Demo Customer
             </button>
+          </div>
+          <div className="demo-credentials-hint">
+            <span><strong>Admin:</strong> admin@shopnest.com • Admin@123456</span>
+            <span><strong>Customer:</strong> customer@shopnest.com • Customer@123456</span>
           </div>
         </div>
 
@@ -95,7 +108,10 @@ export default function Login() {
                 required
                 placeholder="name@example.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (error) setError("");
+                }}
               />
             </div>
           </div>
@@ -108,12 +124,24 @@ export default function Login() {
               <Lock size={18} className="input-icon" />
               <input
                 id="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (error) setError("");
+                }}
               />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </div>
 

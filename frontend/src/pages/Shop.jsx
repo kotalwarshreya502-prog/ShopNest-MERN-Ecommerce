@@ -22,34 +22,37 @@ import api from "../services/api";
 const CATEGORIES = [
   "All",
   "Electronics",
+  "Mobiles & Accessories",
+  "Laptops & Computers",
+  "Gaming",
   "Fashion",
   "Footwear",
+  "Watches",
   "Accessories",
   "Home & Living",
+  "Kitchen Products",
   "Beauty",
   "Sports",
   "Books",
+  "Toys & Lifestyle",
 ];
 
 const BRANDS = [
   "All",
-  // Electronics
-  "Sony", "Apple", "Amazon",
-  // Fashion Men
-  "H&M", "Zara", "Allen Solly", "Uniqlo", "Van Heusen", "Manyavar", "Levi's",
-  // Fashion Women
-  "Biba", "Global Desi", "W", "Libas",
-  // Footwear
-  "Nike", "Adidas", "Puma", "Clarks", "Woodland", "Bata", "Red Tape",
-  // Accessories
-  "Fossil", "Herschel", "Ray-Ban", "Hidesign", "Da Milano", "Baggit", "Caprese", "Mivi",
-  // Home & Living
-  "IKEA", "Urban Ladder", "Pepperfry", "NestHome", "Nestasia", "Lifelong",
+  // Tech & Mobiles
+  "Apple", "Samsung", "Sony", "Dell", "OnePlus", "Anker", "Spigen", "LG", "Keychron", "Logitech",
+  // Audio & Gaming
+  "Bose", "JBL", "SteelSeries", "Nintendo", "Microsoft", "DJI",
+  // Fashion & Footwear
+  "Levi's", "Zara", "H&M", "Manyavar", "Nike", "Adidas", "Clarks", "Woodland",
+  // Watches & Accessories
+  "Fossil", "Seiko", "Herschel", "Ray-Ban", "Hidesign", "Baggit",
+  // Home & Kitchen
+  "Urban Ladder", "NestHome", "Philips", "De'Longhi", "NutriBullet", "Prestige",
   // Beauty & Sports
-  "The Ordinary", "Boldfit",
-  // Books
-  "Jaico Publishing", "Plata Publishing", "HarperCollins", "Pearson Education",
-  "Crown Business", "Penguin Random House",
+  "The Ordinary", "Chanel", "CeraVe", "Boldfit", "Bowflex", "Decathlon",
+  // Books & Toys
+  "Penguin Random House", "Jaico Publishing", "Pearson", "Moleskine", "LEGO",
 ];
 
 const SORT_OPTIONS = [

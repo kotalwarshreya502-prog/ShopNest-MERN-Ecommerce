@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://shopnest.onrender.com/sitemap.xml
+
+# Disallow admin and private routes
+Disallow: /admin
+Disallow: /checkout
+Disallow: /orders
+Disallow: /profile
+Disallow: /cart
+

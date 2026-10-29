@@ -7,7 +7,7 @@ const Review = require("../models/Review");
 const getProducts = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 12;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 12, 48);
     const skip = (page - 1) * limit;
 
     const query = {};
@@ -20,13 +20,33 @@ const getProducts = async (req, res) => {
         { name: regex },
         { brand: regex },
         { category: regex },
+        { subcategory: regex },
         { description: regex },
+        { tags: regex },
       ];
     }
 
-    // Category filter
+    // Category filter (flexible slug or exact matching)
     if (req.query.category && req.query.category !== "All") {
-      query.category = new RegExp(`^${req.query.category.trim()}$`, "i");
+      const catParam = req.query.category.trim();
+      const sanitized = catParam.replace(/[-_]+/g, "[ &-_]*");
+      const categoryOr = [
+        { category: new RegExp(`^${catParam}$`, "i") },
+        { category: new RegExp(`^${sanitized}$`, "i") },
+        { subcategory: new RegExp(`^${catParam}$`, "i") },
+        { subcategory: new RegExp(`^${sanitized}$`, "i") },
+      ];
+      if (query.$or) {
+        query.$and = [{ $or: query.$or }, { $or: categoryOr }];
+        delete query.$or;
+      } else {
+        query.$or = categoryOr;
+      }
+    }
+
+    // Subcategory filter
+    if (req.query.subcategory) {
+      query.subcategory = new RegExp(`^${req.query.subcategory.trim()}$`, "i");
     }
 
     // Brand filter
@@ -34,11 +54,14 @@ const getProducts = async (req, res) => {
       query.brand = new RegExp(`^${req.query.brand.trim()}$`, "i");
     }
 
-    // Price range
+    // Price range (use discountPrice if available, else price)
     if (req.query.minPrice || req.query.maxPrice) {
-      query.price = {};
-      if (req.query.minPrice) query.price.$gte = Number(req.query.minPrice);
-      if (req.query.maxPrice) query.price.$lte = Number(req.query.maxPrice);
+      const priceQuery = {};
+      if (req.query.minPrice) priceQuery.$gte = Number(req.query.minPrice);
+      if (req.query.maxPrice) priceQuery.$lte = Number(req.query.maxPrice);
+      query.$or = query.$or || [];
+      // filter on effective selling price
+      query.discountPrice = priceQuery;
     }
 
     // Rating filter
@@ -56,27 +79,36 @@ const getProducts = async (req, res) => {
       query.isFeatured = true;
     }
 
+    // Bestseller only
+    if (req.query.bestseller === "true") {
+      query.isBestseller = true;
+    }
+
+    // New arrivals only
+    if (req.query.newArrival === "true") {
+      query.isNewArrival = true;
+    }
+
     // Sorting
-    let sort = { createdAt: -1 };
+    let sort = { isFeatured: -1, createdAt: -1 };
     const sortBy = req.query.sort || req.query.sortBy;
 
     if (sortBy === "price-low" || sortBy === "price_asc") {
-      sort = { price: 1 };
+      sort = { discountPrice: 1, price: 1 };
     } else if (sortBy === "price-high" || sortBy === "price_desc") {
-      sort = { price: -1 };
+      sort = { discountPrice: -1, price: -1 };
     } else if (sortBy === "rating") {
-      sort = { ratings: -1 };
+      sort = { ratings: -1, numReviews: -1 };
     } else if (sortBy === "newest") {
       sort = { createdAt: -1 };
     } else if (sortBy === "bestseller") {
-      sort = { numReviews: -1, ratings: -1 };
-    } else {
-      // Default: featured first, then newest
-      sort = { isFeatured: -1, createdAt: -1 };
+      sort = { isBestseller: -1, numReviews: -1, ratings: -1 };
+    } else if (sortBy === "discount") {
+      sort = { discountPrice: 1 };
     }
 
     const total = await Product.countDocuments(query);
-    const products = await Product.find(query).sort(sort).skip(skip).limit(limit);
+    const products = await Product.find(query).sort(sort).skip(skip).limit(limit).lean();
 
     res.json({
       success: true,
@@ -91,25 +123,39 @@ const getProducts = async (req, res) => {
   }
 };
 
-// @desc    Fetch single product by ID
+// @desc    Fetch single product by ID or slug
 // @route   GET /api/products/:id
 // @access  Public
 const getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    let product;
+    const param = req.params.id;
+
+    // Try slug first, then ObjectId
+    if (param.match(/^[0-9a-fA-F]{24}$/)) {
+      product = await Product.findById(param);
+    } else {
+      product = await Product.findOne({ slug: param.toLowerCase() });
+    }
 
     if (!product) {
       return res.status(404).json({ success: false, message: "Product not found" });
     }
 
     // Fetch associated reviews
-    const reviews = await Review.find({ product: product._id }).sort({ createdAt: -1 });
+    const reviews = await Review.find({ product: product._id })
+      .populate("user", "name")
+      .sort({ createdAt: -1 })
+      .limit(20);
 
-    // Fetch 4 related products from same category
+    // Fetch 6 related products from same category
     const relatedProducts = await Product.find({
       category: product.category,
       _id: { $ne: product._id },
-    }).limit(4);
+    })
+      .sort({ ratings: -1 })
+      .limit(6)
+      .lean();
 
     res.json({
       success: true,
@@ -125,27 +171,31 @@ const getProductById = async (req, res) => {
   }
 };
 
-// @desc    Fetch featured & trending products for homepage
+// @desc    Fetch featured, trending, bestsellers & new arrivals for homepage
 // @route   GET /api/products/featured
 // @access  Public
 const getFeaturedProducts = async (req, res) => {
   try {
-    const featured = await Product.find({ isFeatured: true }).limit(8);
-    const trending = await Product.find({}).sort({ ratings: -1, numReviews: -1 }).limit(8);
-    const bestsellers = await Product.find({ isBestseller: true }).limit(8);
+    const [featured, trending, bestsellers, newArrivals] = await Promise.all([
+      Product.find({ isFeatured: true }).sort({ ratings: -1 }).limit(10).lean(),
+      Product.find({ stock: { $gt: 0 } }).sort({ ratings: -1, numReviews: -1 }).limit(10).lean(),
+      Product.find({ isBestseller: true }).sort({ numReviews: -1 }).limit(10).lean(),
+      Product.find({ isNewArrival: true }).sort({ createdAt: -1 }).limit(8).lean(),
+    ]);
 
     res.json({
       success: true,
-      featured: featured.length ? featured : trending,
+      featured: featured.length ? featured : trending.slice(0, 8),
       trending,
-      bestsellers: bestsellers.length ? bestsellers : featured,
+      bestsellers: bestsellers.length ? bestsellers : trending,
+      newArrivals: newArrivals.length ? newArrivals : featured.slice(0, 4),
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// @desc    Get categories with counts
+// @desc    Get categories with product counts and images
 // @route   GET /api/products/categories
 // @access  Public
 const getCategories = async (req, res) => {
@@ -167,6 +217,7 @@ const getCategories = async (req, res) => {
         name: c._id,
         count: c.count,
         image: c.image,
+        slug: c._id.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
       })),
     });
   } catch (error) {
@@ -174,13 +225,17 @@ const getCategories = async (req, res) => {
   }
 };
 
-// @desc    Get distinct brands
+// @desc    Get distinct brands (optionally filtered by category)
 // @route   GET /api/products/brands
 // @access  Public
 const getBrands = async (req, res) => {
   try {
-    const brands = await Product.distinct("brand");
-    res.json({ success: true, brands: brands.filter(Boolean) });
+    const filter = {};
+    if (req.query.category && req.query.category !== "All") {
+      filter.category = new RegExp(`^${req.query.category}$`, "i");
+    }
+    const brands = await Product.distinct("brand", filter);
+    res.json({ success: true, brands: brands.filter(Boolean).sort() });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -192,18 +247,9 @@ const getBrands = async (req, res) => {
 const createProduct = async (req, res) => {
   try {
     const {
-      name,
-      price,
-      discountPrice,
-      description,
-      image,
-      images,
-      brand,
-      category,
-      stock,
-      isFeatured,
-      isBestseller,
-      specifications,
+      name, price, discountPrice, description, image, images,
+      brand, category, subcategory, stock, isFeatured, isBestseller,
+      isNewArrival, specifications, tags, slug,
     } = req.body;
 
     const product = new Product({
@@ -215,18 +261,18 @@ const createProduct = async (req, res) => {
       images: images || (image ? [image] : []),
       brand: brand || "ShopNest",
       category,
+      subcategory: subcategory || "",
       stock: Number(stock) || 0,
       isFeatured: !!isFeatured,
       isBestseller: !!isBestseller,
+      isNewArrival: !!isNewArrival,
       specifications: specifications || [],
+      tags: tags || [],
+      slug: slug || name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
     });
 
     const createdProduct = await product.save();
-    res.status(201).json({
-      success: true,
-      message: "Product created successfully",
-      product: createdProduct,
-    });
+    res.status(201).json({ success: true, message: "Product created successfully", product: createdProduct });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -244,32 +290,17 @@ const updateProduct = async (req, res) => {
     }
 
     const fields = [
-      "name",
-      "price",
-      "discountPrice",
-      "description",
-      "image",
-      "images",
-      "brand",
-      "category",
-      "stock",
-      "isFeatured",
-      "isBestseller",
-      "specifications",
+      "name", "price", "discountPrice", "description", "image", "images",
+      "brand", "category", "subcategory", "stock", "isFeatured", "isBestseller",
+      "isNewArrival", "specifications", "tags", "slug",
     ];
 
     fields.forEach((field) => {
-      if (req.body[field] !== undefined) {
-        product[field] = req.body[field];
-      }
+      if (req.body[field] !== undefined) product[field] = req.body[field];
     });
 
     const updatedProduct = await product.save();
-    res.json({
-      success: true,
-      message: "Product updated successfully",
-      product: updatedProduct,
-    });
+    res.json({ success: true, message: "Product updated successfully", product: updatedProduct });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -305,4 +336,3 @@ module.exports = {
   updateProduct,
   deleteProduct,
 };
-

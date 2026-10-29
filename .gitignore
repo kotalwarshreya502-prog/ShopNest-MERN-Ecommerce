@@ -1,5 +1,42 @@
 node_modules/
+dist/
+build/
+.cache/
+
+# Environment files
 .env
 .env.*
 !.env.example
-dist/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor directories
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Vite / Next.js
+.vite/
+.next/
+out/
+
+# Build artifacts
+*.tsbuildinfo

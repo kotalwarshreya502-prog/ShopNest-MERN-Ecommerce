@@ -63,6 +63,8 @@ export default function ProductCard({ product }) {
             <span className="badge-discount">{discountPercent}% OFF</span>
           )}
           {product.isFeatured && <span className="badge-featured">FEATURED</span>}
+          {product.isBestseller && <span className="badge-bestseller">BESTSELLER</span>}
+          {product.isNewArrival && <span className="badge-new">NEW</span>}
           {product.stock <= 5 && product.stock > 0 && (
             <span className="badge-stock-low">Only {product.stock} left</span>
           )}

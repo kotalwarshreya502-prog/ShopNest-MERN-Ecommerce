@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Sparkles, TrendingUp, Award, Zap } from "lucide-react";
+import { ArrowRight, Sparkles, Award, Zap, TrendingUp, Tag, Star } from "lucide-react";
 import Navbar from "../components/common/Navbar";
 import Footer from "../components/common/Footer";
 import HeroBanner from "../components/home/HeroBanner";
@@ -11,158 +11,51 @@ import ProductCard from "../components/common/ProductCard";
 import LoadingSkeleton from "../components/common/LoadingSkeleton";
 import api from "../services/api";
 
-const SAMPLE_FEATURED = [
-  {
-    _id: "sn-prod-01",
-    name: "Sony WH-1000XM5 Noise Cancelling Wireless Headphones",
-    category: "Electronics",
-    brand: "Sony",
-    price: 29990,
-    discountPrice: 24990,
-    stock: 14,
-    ratings: 4.9,
-    numReviews: 320,
-    isFeatured: true,
-    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=700",
-  },
-  {
-    _id: "sn-prod-02",
-    name: "Nike Air Max 270 React Athletic Sneakers",
-    category: "Footwear",
-    brand: "Nike",
-    price: 12995,
-    discountPrice: 8995,
-    stock: 9,
-    ratings: 4.8,
-    numReviews: 195,
-    isFeatured: true,
-    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=700",
-  },
-  {
-    _id: "sn-prod-03",
-    name: "Fossil Minimalist Chronograph Leather Watch",
-    category: "Accessories",
-    brand: "Fossil",
-    price: 11495,
-    discountPrice: 6995,
-    stock: 18,
-    ratings: 4.6,
-    numReviews: 88,
-    isFeatured: true,
-    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=700",
-  },
-  {
-    _id: "sn-prod-04",
-    name: "Herschel Classic Everyday Travel Backpack 24L",
-    category: "Accessories",
-    brand: "Herschel",
-    price: 5499,
-    discountPrice: 3899,
-    stock: 22,
-    ratings: 4.7,
-    numReviews: 142,
-    isFeatured: true,
-    image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=700",
-  },
-  {
-    _id: "sn-prod-05",
-    name: "Apple Watch Series 9 GPS 45mm Midnight Aluminum",
-    category: "Electronics",
-    brand: "Apple",
-    price: 44900,
-    discountPrice: 39900,
-    stock: 7,
-    ratings: 4.9,
-    numReviews: 410,
-    isFeatured: true,
-    image: "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=700",
-  },
-  {
-    _id: "sn-prod-06",
-    name: "Ray-Ban Classic Polarized Aviator Sunglasses",
-    category: "Accessories",
-    brand: "Ray-Ban",
-    price: 8990,
-    discountPrice: 6490,
-    stock: 15,
-    ratings: 4.6,
-    numReviews: 97,
-    isFeatured: true,
-    image: "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=700",
-  },
-  {
-    _id: "sn-prod-07",
-    name: "Levi's Men's Trucker Denim Jacket Vintage Indigo",
-    category: "Fashion",
-    brand: "Levi's",
-    price: 5999,
-    discountPrice: 3999,
-    stock: 11,
-    ratings: 4.7,
-    numReviews: 156,
-    isFeatured: true,
-    image: "https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=700",
-  },
-  {
-    _id: "sn-prod-08",
-    name: "Adidas Originals Stan Smith Classic Leather Shoes",
-    category: "Footwear",
-    brand: "Adidas",
-    price: 7999,
-    discountPrice: 5499,
-    stock: 16,
-    ratings: 4.8,
-    numReviews: 234,
-    isFeatured: true,
-    image: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=700",
-  },
-];
-
 export default function Home() {
-  const [products, setProducts] = useState([]);
+  const [featured, setFeatured] = useState([]);
+  const [trending, setTrending] = useState([]);
+  const [bestsellers, setBestsellers] = useState([]);
+  const [newArrivals, setNewArrivals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
 
-  useEffect(() => {
-    let isMounted = true;
+  const fetchHomepageData = useCallback(async () => {
     setLoading(true);
-
-    api
-      .get("/products")
-      .then((res) => {
-        if (isMounted) {
-          const list = Array.isArray(res.data)
-            ? res.data
-            : res.data?.products || [];
-          if (list.length > 0) {
-            setProducts(list);
-          } else {
-            setProducts(SAMPLE_FEATURED);
-          }
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          setProducts(SAMPLE_FEATURED);
-        }
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
+    try {
+      const { data } = await api.get("/products/featured");
+      if (data.success) {
+        setFeatured(data.featured || []);
+        setTrending(data.trending || []);
+        setBestsellers(data.bestsellers || []);
+        setNewArrivals(data.newArrivals || []);
+      }
+    } catch (err) {
+      console.error("Failed to load homepage products:", err.message);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const featuredList = products.slice(0, 8);
+  useEffect(() => {
+    fetchHomepageData();
+  }, [fetchHomepageData]);
 
-  const filteredByTab =
+  const TABS = [
+    { id: "all", label: "All Picks" },
+    { id: "Electronics", label: "Electronics" },
+    { id: "Mobiles & Accessories", label: "Mobiles" },
+    { id: "Gaming", label: "Gaming" },
+    { id: "Fashion", label: "Fashion" },
+    { id: "Footwear", label: "Footwear" },
+    { id: "Home & Living", label: "Home" },
+    { id: "Kitchen Products", label: "Kitchen" },
+  ];
+
+  const tabProducts =
     activeTab === "all"
-      ? featuredList
-      : featuredList.filter(
-          (p) =>
-            (p.category || "").toLowerCase() === activeTab.toLowerCase()
+      ? featured
+      : featured.filter(
+          (p) => (p.category || "").toLowerCase() === activeTab.toLowerCase()
         );
 
   return (
@@ -176,7 +69,7 @@ export default function Home() {
         {/* Shop By Category */}
         <CategoryGrid />
 
-        {/* Featured Products Section */}
+        {/* ── Featured / Trending Products ─────────────────────────────── */}
         <section className="featured-section section-container">
           <div className="section-header-row">
             <div>
@@ -185,81 +78,158 @@ export default function Home() {
               </span>
               <h2 className="section-title">Trending &amp; Featured Products</h2>
               <p className="section-subtitle">
-                Explore our highest rated products chosen by thousands of satisfied shoppers.
+                Explore our highest-rated products chosen by thousands of satisfied shoppers.
               </p>
             </div>
 
-            {/* Filter Pills */}
+            {/* Filter Tabs */}
             <div className="filter-pill-group">
-              <button
-                className={`filter-pill ${activeTab === "all" ? "active" : ""}`}
-                onClick={() => setActiveTab("all")}
-              >
-                All Picks
-              </button>
-              <button
-                className={`filter-pill ${activeTab === "electronics" ? "active" : ""}`}
-                onClick={() => setActiveTab("electronics")}
-              >
-                Electronics
-              </button>
-              <button
-                className={`filter-pill ${activeTab === "footwear" ? "active" : ""}`}
-                onClick={() => setActiveTab("footwear")}
-              >
-                Footwear
-              </button>
-              <button
-                className={`filter-pill ${activeTab === "accessories" ? "active" : ""}`}
-                onClick={() => setActiveTab("accessories")}
-              >
-                Accessories
-              </button>
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  className={`filter-pill ${activeTab === tab.id ? "active" : ""}`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
 
           {loading ? (
             <LoadingSkeleton count={8} />
-          ) : (
+          ) : tabProducts.length > 0 ? (
             <div className="product-grid">
-              {filteredByTab.map((prod) => (
+              {tabProducts.slice(0, 8).map((prod) => (
                 <ProductCard key={prod._id} product={prod} />
               ))}
+            </div>
+          ) : (
+            <div className="empty-state" style={{ padding: "3rem 0" }}>
+              <p>No featured products in this category yet.</p>
             </div>
           )}
 
           <div className="section-cta-wrap">
             <Link to="/shop" className="btn-outline btn-explore-more">
-              Explore All Products in Catalog <ArrowRight size={18} />
+              Explore All Products <ArrowRight size={18} />
             </Link>
           </div>
         </section>
 
-        {/* Promotional Banner */}
+        {/* ── Promotional Banner ────────────────────────────────────────── */}
         <PromoBanner />
 
-        {/* Best Sellers Strip */}
-        <section className="bestsellers-section section-container">
+        {/* ── Best Sellers ──────────────────────────────────────────────── */}
+        {(loading || bestsellers.length > 0) && (
+          <section className="bestsellers-section section-container">
+            <div className="section-header">
+              <div>
+                <span className="eyebrow">
+                  <Award size={14} /> SHOPPER FAVORITES
+                </span>
+                <h2 className="section-title">Best Sellers This Week</h2>
+              </div>
+              <Link to="/shop?bestseller=true" className="text-link">
+                View All Best Sellers <ArrowRight size={18} />
+              </Link>
+            </div>
+
+            {loading ? (
+              <LoadingSkeleton count={4} />
+            ) : (
+              <div className="product-grid">
+                {bestsellers.slice(0, 8).map((prod) => (
+                  <ProductCard key={prod._id} product={prod} />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ── Today's Deals / Discounts ─────────────────────────────────── */}
+        <section className="deals-strip-section section-container">
           <div className="section-header">
             <div>
               <span className="eyebrow">
-                <Award size={14} /> SHOPPER FAVORITES
+                <Zap size={14} /> LIMITED TIME
               </span>
-              <h2 className="section-title">Best Sellers This Week</h2>
+              <h2 className="section-title">Today's Deals</h2>
             </div>
             <Link to="/deals" className="text-link">
-              View Special Offers <ArrowRight size={18} />
+              All Deals &amp; Offers <ArrowRight size={18} />
             </Link>
           </div>
 
-          <div className="product-grid">
-            {products.slice(2, 6).map((prod) => (
-              <ProductCard key={prod._id} product={prod} />
-            ))}
+          {loading ? (
+            <LoadingSkeleton count={4} />
+          ) : (
+            <div className="product-grid">
+              {trending.slice(0, 4).map((prod) => (
+                <ProductCard key={prod._id} product={prod} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ── New Arrivals ──────────────────────────────────────────────── */}
+        {(loading || newArrivals.length > 0) && (
+          <section className="new-arrivals-section section-container">
+            <div className="section-header">
+              <div>
+                <span className="eyebrow">
+                  <TrendingUp size={14} /> JUST LANDED
+                </span>
+                <h2 className="section-title">New Arrivals</h2>
+              </div>
+              <Link to="/new-arrivals" className="text-link">
+                View All New Arrivals <ArrowRight size={18} />
+              </Link>
+            </div>
+
+            {loading ? (
+              <LoadingSkeleton count={4} />
+            ) : (
+              <div className="product-grid">
+                {(newArrivals.length > 0 ? newArrivals : trending.slice(4, 8)).slice(0, 4).map((prod) => (
+                  <ProductCard key={prod._id} product={prod} />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ── Promo Cards ───────────────────────────────────────────────── */}
+        <section className="section-container">
+          <div className="promo-card-grid">
+            <Link to="/shop?category=Electronics" className="promo-banner-card promo-electronics">
+              <div className="promo-card-content">
+                <Tag size={20} />
+                <span>Up to 40% off</span>
+                <h3>Electronics &amp; Gadgets</h3>
+                <p>Shop Now →</p>
+              </div>
+            </Link>
+            <Link to="/shop?category=Fashion" className="promo-banner-card promo-fashion">
+              <div className="promo-card-content">
+                <Star size={20} />
+                <span>New Season</span>
+                <h3>Fashion &amp; Apparel</h3>
+                <p>Explore Collection →</p>
+              </div>
+            </Link>
+            <Link to="/deals" className="promo-banner-card promo-deals">
+              <div className="promo-card-content">
+                <Zap size={20} />
+                <span>Today Only</span>
+                <h3>Flash Deals</h3>
+                <p>Grab Now →</p>
+              </div>
+            </Link>
           </div>
         </section>
 
-        {/* Newsletter Subscription */}
+        {/* Newsletter */}
         <Newsletter />
       </main>
 

@@ -46,6 +46,12 @@ const productSchema = new mongoose.Schema(
       trim: true,
     },
 
+    subcategory: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
     brand: {
       type: String,
       default: "ShopNest",
@@ -84,6 +90,11 @@ const productSchema = new mongoose.Schema(
       default: false,
     },
 
+    isNewArrival: {
+      type: Boolean,
+      default: false,
+    },
+
     ratings: {
       type: Number,
       default: 4.5,
@@ -107,7 +118,15 @@ const productSchema = new mongoose.Schema(
   }
 );
 
-productSchema.index({ name: "text", brand: "text", category: "text", description: "text" });
+// Text search index
+productSchema.index({ name: "text", brand: "text", category: "text", description: "text", tags: "text" });
+
+// Compound indexes for common queries
+productSchema.index({ category: 1, isFeatured: -1 });
+productSchema.index({ isBestseller: 1, ratings: -1 });
+productSchema.index({ isNewArrival: 1, createdAt: -1 });
+productSchema.index({ price: 1 });
+productSchema.index({ slug: 1 }, { unique: true, sparse: true });
 
 module.exports =
   mongoose.models.Product ||

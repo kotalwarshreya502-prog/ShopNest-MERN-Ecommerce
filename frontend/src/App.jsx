@@ -1,9 +1,11 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { WishlistProvider } from "./context/WishlistContext";
+import ScrollToTop from "./components/common/ScrollToTop";
 
+// Pages
 import Home from "./pages/Home";
 import Shop from "./pages/Shop";
 import Deals from "./pages/Deals";
@@ -16,29 +18,14 @@ import ProductDetails from "./pages/ProductDetails";
 import Profile from "./pages/Profile";
 import Wishlist from "./pages/Wishlist";
 import AdminDashboard from "./pages/AdminDashboard";
-
-function NotFound() {
-  return (
-    <div className="empty-state not-found-state">
-      <span className="not-found-code">404</span>
-      <h2>Page Not Found</h2>
-      <p>Sorry, the page you're searching for does not exist or has been relocated.</p>
-      <a href="/" className="btn-primary">
-        Back to Homepage
-      </a>
-    </div>
-  );
-}
-
-function ScrollToTop() {
-  const { pathname } = useLocation();
-
-  React.useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "instant" });
-  }, [pathname]);
-
-  return null;
-}
+import NewArrivals from "./pages/NewArrivals";
+import BestSellers from "./pages/BestSellers";
+import CategoryPage from "./pages/CategoryPage";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Terms from "./pages/Terms";
+import NotFound from "./pages/NotFound";
 
 export default function App() {
   return (
@@ -54,6 +41,11 @@ export default function App() {
               {/* Shopping & Discovery */}
               <Route path="/shop" element={<Shop />} />
               <Route path="/deals" element={<Deals />} />
+              <Route path="/new-arrivals" element={<NewArrivals />} />
+              <Route path="/best-sellers" element={<BestSellers />} />
+
+              {/* Category pages */}
+              <Route path="/category/:slug" element={<CategoryPage />} />
 
               {/* Product Details (both patterns supported) */}
               <Route path="/product/:id" element={<ProductDetails />} />
@@ -72,9 +64,21 @@ export default function App() {
 
               {/* Admin Console */}
               <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/*" element={<AdminDashboard />} />
 
-              {/* Redirects & 404 */}
+              {/* Info Pages */}
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/return-policy" element={<Terms />} />
+
+              {/* Redirects */}
               <Route path="/home" element={<Navigate to="/" replace />} />
+              <Route path="/bestsellers" element={<Navigate to="/best-sellers" replace />} />
+              <Route path="/new" element={<Navigate to="/new-arrivals" replace />} />
+
+              {/* 404 */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
