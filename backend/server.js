@@ -91,14 +91,16 @@ app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
 
 // ── Health Check ──────────────────────────────────────────────────────────────
-app.get("/api/health", (req, res) => {
+const healthHandler = (req, res) => {
   res.json({
     success: true,
     message: "ShopNest API is running",
     env: process.env.NODE_ENV || "development",
     timestamp: new Date().toISOString(),
   });
-});
+};
+app.get("/api/health", healthHandler);
+app.get("/health", healthHandler);
 
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
