@@ -21,14 +21,14 @@ import api from "../services/api";
 
 const CATEGORIES = [
   "All",
-  "Electronics",
-  "Mobiles & Accessories",
-  "Laptops & Computers",
+  "Mobiles",
+  "Laptops",
   "Gaming",
   "Fashion",
   "Footwear",
   "Watches",
   "Accessories",
+  "Electronics",
   "Home & Living",
   "Kitchen Products",
   "Beauty",
