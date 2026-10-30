@@ -869,8 +869,8 @@ const realProductsCatalog = [
     isFeatured: true,
     isBestseller: true,
     isNewArrival: false,
-    image: "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=800&auto=format&fit=crop&q=80",
-    images: ["https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=800&auto=format&fit=crop&q=80"],
+    image: "https://images.unsplash.com/photo-1552346154-21d32810aba3?w=800&auto=format&fit=crop&q=80",
+    images: ["https://images.unsplash.com/photo-1552346154-21d32810aba3?w=800&auto=format&fit=crop&q=80"],
     specifications: [
       { key: "Upper", value: "Full-grain genuine leather with perforated toe box" },
       { key: "Cushioning", value: "Encapsulated Nike Air-Sole unit in heel" },
@@ -965,8 +965,8 @@ const realProductsCatalog = [
     isFeatured: false,
     isBestseller: false,
     isNewArrival: true,
-    image: "https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=800&auto=format&fit=crop&q=80",
-    images: ["https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=800&auto=format&fit=crop&q=80"],
+    image: "https://images.unsplash.com/photo-1614253429340-98120bd6d753?w=800&auto=format&fit=crop&q=80",
+    images: ["https://images.unsplash.com/photo-1614253429340-98120bd6d753?w=800&auto=format&fit=crop&q=80"],
     specifications: [
       { key: "Leather", value: "100% Full-grain burnished calf leather" },
       { key: "Footbed", value: "Cushioned OrthoLite dual-density comfort footbed" },
