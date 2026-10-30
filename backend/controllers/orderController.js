@@ -1,6 +1,7 @@
 const Order = require("../models/Order");
 const Product = require("../models/product");
 const Coupon = require("../models/Coupon");
+const Cart = require("../models/Cart");
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -113,6 +114,12 @@ const createOrder = async (req, res) => {
     });
 
     const createdOrder = await order.save();
+
+    // Clear the authenticated user's cart in MongoDB Atlas
+    await Cart.findOneAndUpdate(
+      { user: req.user._id },
+      { items: [], totalQuantity: 0, totalPrice: 0 }
+    );
 
     res.status(201).json({
       success: true,

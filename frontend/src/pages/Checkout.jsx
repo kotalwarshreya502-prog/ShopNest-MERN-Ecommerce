@@ -44,6 +44,13 @@ export default function Checkout() {
   const [errorMessage, setErrorMessage] = useState("");
   const [orderSuccess, setOrderSuccess] = useState(null);
 
+  // Require authentication for checkout
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate("/login", { state: { from: { pathname: "/checkout" } } });
+    }
+  }, [isAuthenticated, navigate]);
+
   // Populate address if user has saved addresses
   useEffect(() => {
     if (user?.addresses && user.addresses.length > 0) {

@@ -168,13 +168,19 @@ export default function Navbar() {
                       </div>
                       <div className="dropdown-divider" />
                       <Link to="/profile" onClick={() => setUserDropdownOpen(false)} className="dropdown-link" role="menuitem">
-                        <User size={16} /> My Profile
+                        <User size={16} /> My Account
                       </Link>
                       <Link to="/orders" onClick={() => setUserDropdownOpen(false)} className="dropdown-link" role="menuitem">
                         <Package size={16} /> My Orders
                       </Link>
                       <Link to="/wishlist" onClick={() => setUserDropdownOpen(false)} className="dropdown-link" role="menuitem">
-                        <Heart size={16} /> Wishlist {wishlistCount > 0 && `(${wishlistCount})`}
+                        <Heart size={16} /> My Wishlist {wishlistCount > 0 && `(${wishlistCount})`}
+                      </Link>
+                      <Link to="/cart" onClick={() => setUserDropdownOpen(false)} className="dropdown-link" role="menuitem">
+                        <ShoppingBag size={16} /> My Cart {totalItemsCount > 0 && `(${totalItemsCount})`}
+                      </Link>
+                      <Link to="/profile" onClick={() => setUserDropdownOpen(false)} className="dropdown-link" role="menuitem">
+                        <User size={16} /> Profile
                       </Link>
                       {isAdmin && (
                         <Link to="/admin" onClick={() => setUserDropdownOpen(false)} className="dropdown-link admin-link" role="menuitem">
@@ -183,15 +189,15 @@ export default function Navbar() {
                       )}
                       <div className="dropdown-divider" />
                       <button onClick={handleLogout} className="dropdown-link logout-btn" role="menuitem">
-                        <LogOut size={16} /> Sign out
+                        <LogOut size={16} /> Logout
                       </button>
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="auth-buttons">
-                  <Link to="/login" className="btn-nav-login">Sign in</Link>
-                  <Link to="/register" className="btn-nav-register">Join</Link>
+                  <Link to="/login" className="btn-nav-login">Login</Link>
+                  <Link to="/register" className="btn-nav-register">Register</Link>
                 </div>
               )}
             </div>

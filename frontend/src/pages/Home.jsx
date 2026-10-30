@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
-import { ArrowRight, Sparkles, Award, Zap, TrendingUp, Tag, Star } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { ArrowRight, Sparkles, Award, Zap, TrendingUp, Tag, Star, CheckCircle, X } from "lucide-react";
 import Navbar from "../components/common/Navbar";
 import Footer from "../components/common/Footer";
 import HeroBanner from "../components/home/HeroBanner";
@@ -17,6 +17,17 @@ export default function Home() {
   const [bestsellers, setBestsellers] = useState([]);
   const [newArrivals, setNewArrivals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  const [toast, setToast] = useState(location.state?.notification || "");
+
+  useEffect(() => {
+    if (location.state?.notification) {
+      setToast(location.state.notification);
+      const timer = setTimeout(() => setToast(""), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [location.state]);
+
   const [activeTab, setActiveTab] = useState("all");
 
   const fetchHomepageData = useCallback(async () => {
@@ -63,6 +74,20 @@ export default function Home() {
       <Navbar />
 
       <main>
+        {toast && (
+          <div className="section-container" style={{ paddingTop: "1rem" }}>
+            <div className="alert-box success" style={{ marginBottom: "1rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <CheckCircle size={18} />
+                <strong style={{ fontSize: "0.95rem" }}>{toast}</strong>
+              </div>
+              <button onClick={() => setToast("")} style={{ color: "inherit", opacity: 0.8, cursor: "pointer", display: "flex" }}>
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Hero Section */}
         <HeroBanner />
 

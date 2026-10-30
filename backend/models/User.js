@@ -77,6 +77,12 @@ const userSchema = new mongoose.Schema(
       default: "customer",
     },
 
+    status: {
+      type: String,
+      enum: ["active", "suspended"],
+      default: "active",
+    },
+
     phone: {
       type: String,
       trim: true,

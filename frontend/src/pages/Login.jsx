@@ -1,19 +1,22 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Mail, Lock, ArrowRight, AlertCircle, Sparkles, Eye, EyeOff, ShieldCheck, UserCheck } from "lucide-react";
+import { Mail, Lock, ArrowRight, AlertCircle, CheckCircle, Sparkles, Eye, EyeOff, ShieldCheck, UserCheck } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
 import api from "../services/api";
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, pendingCartItem, clearPendingCartItem } = useAuth();
+  const { addPendingItemToCart } = useCart();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [activeDemo, setActiveDemo] = useState(null);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   const redirectPath = location.state?.from?.pathname || "/";
@@ -28,9 +31,15 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
+    setSuccessMessage("");
 
     const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !password) {
+      setError("Please enter both email and password");
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const response = await api.post("/auth/login", {
@@ -39,14 +48,39 @@ export default function Login() {
       });
 
       if (response.data.success) {
+        // Authenticate user in React Context
         login(response.data.user, response.data.token);
-        navigate(redirectPath, { replace: true });
+
+        let finalSuccessMsg = "Signed in successfully!";
+
+        // Automatic Cart Addition after Login
+        const pendingItem = pendingCartItem || location.state?.pendingCartItem;
+        if (pendingItem && pendingItem.product) {
+          await addPendingItemToCart(pendingItem);
+          clearPendingCartItem();
+          finalSuccessMsg = "Your product has been successfully added to your cart!";
+        }
+
+        setSuccessMessage(finalSuccessMsg);
+
+        setTimeout(() => {
+          navigate(redirectPath, {
+            replace: true,
+            state: { notification: finalSuccessMsg },
+          });
+        }, 700);
       }
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          "Failed to sign in. Please verify your email and password."
-      );
+      const status = err.response?.status;
+      const msg = err.response?.data?.message;
+
+      if (status === 404 || (msg && msg.toLowerCase().includes("not found"))) {
+        setError("Account not found. Please register first.");
+      } else if (msg) {
+        setError(msg);
+      } else {
+        setError("Failed to sign in. Please verify your email and password.");
+      }
     } finally {
       setLoading(false);
     }
@@ -91,13 +125,20 @@ export default function Login() {
         </div>
 
         {error && (
-          <div className="alert-box error">
+          <div className="alert-box error" role="alert">
             <AlertCircle size={18} />
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="auth-form">
+        {successMessage && (
+          <div className="alert-box success" role="status">
+            <CheckCircle size={18} />
+            <span>{successMessage}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="auth-form" noValidate>
           <div className="form-group">
             <label htmlFor="email">Email Address</label>
             <div className="input-with-icon">

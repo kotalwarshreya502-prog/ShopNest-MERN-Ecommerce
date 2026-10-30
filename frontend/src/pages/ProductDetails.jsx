@@ -29,7 +29,7 @@ export default function ProductDetails() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, openAuthModal } = useAuth();
 
   const [product, setProduct] = useState(null);
   const [reviews, setReviews] = useState([]);
@@ -124,16 +124,22 @@ export default function ProductDetails() {
     }
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!product || product.stock <= 0) return;
-    addToCart(product, quantity);
-    setAddedNotice(true);
-    setTimeout(() => setAddedNotice(false), 2500);
+    const res = await addToCart(product, quantity);
+    if (res?.success) {
+      setAddedNotice(true);
+      setTimeout(() => setAddedNotice(false), 2500);
+    }
   };
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     if (!product || product.stock <= 0) return;
-    addToCart(product, quantity);
+    if (!isAuthenticated) {
+      openAuthModal({ product, quantity });
+      return;
+    }
+    await addToCart(product, quantity);
     navigate("/checkout");
   };
 

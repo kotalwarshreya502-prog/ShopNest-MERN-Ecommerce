@@ -22,12 +22,14 @@ export default function ProductCard({ product }) {
       ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
       : 0;
 
-  const handleQuickAdd = (e) => {
+  const handleQuickAdd = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(product, 1);
-    setJustAdded(true);
-    setTimeout(() => setJustAdded(false), 2000);
+    const result = await addToCart(product, 1);
+    if (result && result.success) {
+      setJustAdded(true);
+      setTimeout(() => setJustAdded(false), 2000);
+    }
   };
 
   const handleWishlistClick = (e) => {

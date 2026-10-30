@@ -1,5 +1,7 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const Cart = require("../models/Cart");
+const Wishlist = require("../models/Wishlist");
 const { JWT_SECRET } = require("../middleware/authMiddleware");
 
 // Generate JWT Token
@@ -14,47 +16,97 @@ const generateToken = (id) => {
 // @access  Public
 const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, phone, password, confirmPassword } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Please provide all required fields (name, email, password)",
+        message: "Please provide all required fields (Full Name, Email Address, and Password)",
       });
     }
 
+    const trimmedName = String(name).trim();
     const normalizedEmail = String(email).trim().toLowerCase();
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid email address",
+      });
+    }
+
+    // Validate password requirements
+    if (String(password).length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters long",
+      });
+    }
+
+    // Validate confirm password if sent
+    if (confirmPassword && password !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Passwords do not match. Please re-enter your password.",
+      });
+    }
+
+    // Check whether the email already exists in MongoDB Atlas
     const userExists = await User.findOne({ email: normalizedEmail });
     if (userExists) {
       return res.status(400).json({
         success: false,
-        message: "An account with this email address already exists",
+        message: "This email is already registered. Please log in.",
       });
     }
 
+    // Security: Only system admin email can be admin; customers cannot register as admin
+    const userRole = normalizedEmail === "admin@shopnest.com" ? "admin" : "customer";
+
     const user = await User.create({
-      name: String(name).trim(),
+      name: trimmedName,
       email: normalizedEmail,
+      phone: phone ? String(phone).trim() : "",
       password,
-      role: normalizedEmail.includes("admin@") ? "admin" : "customer",
+      role: userRole,
+      status: "active",
     });
+
+    // Initialize permanent MongoDB Cart & Wishlist for this user
+    await Cart.findOneAndUpdate(
+      { user: user._id },
+      { user: user._id, items: [], totalQuantity: 0, totalPrice: 0 },
+      { upsert: true, returnDocument: "after" }
+    );
+
+    await Wishlist.findOneAndUpdate(
+      { user: user._id },
+      { user: user._id, products: [] },
+      { upsert: true, returnDocument: "after" }
+    );
 
     const token = generateToken(user._id);
 
     res.status(201).json({
       success: true,
-      message: "Account created successfully",
+      message: "Account created successfully! Welcome to ShopNest.",
       token,
       user: {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
-        addresses: user.addresses,
-        wishlist: user.wishlist,
+        status: user.status,
+        addresses: user.addresses || [],
+        wishlist: user.wishlist || [],
+        createdAt: user.createdAt,
       },
     });
   } catch (error) {
+    console.error("Registration error:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Failed to register user",
@@ -77,14 +129,32 @@ const loginUser = async (req, res) => {
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
+
+    // Check if the user exists in MongoDB Atlas
     const user = await User.findOne({ email: normalizedEmail }).select("+password");
 
-    if (!user || !(await user.comparePassword(password))) {
-      return res.status(401).json({
+    if (!user) {
+      return res.status(404).json({
         success: false,
-        message: "Invalid email or password",
+        message: "Account not found. Please register first.",
       });
     }
+
+    // Verify password with bcrypt
+    const isPasswordMatch = await user.comparePassword(password);
+    if (!isPasswordMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid password. Please check your credentials and try again.",
+      });
+    }
+
+    // Ensure cart exists in MongoDB
+    await Cart.findOneAndUpdate(
+      { user: user._id },
+      { $setOnInsert: { user: user._id, items: [], totalQuantity: 0, totalPrice: 0 } },
+      { upsert: true, returnDocument: "after" }
+    );
 
     const token = generateToken(user._id);
 
@@ -96,12 +166,16 @@ const loginUser = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
-        addresses: user.addresses,
-        wishlist: user.wishlist,
+        status: user.status,
+        addresses: user.addresses || [],
+        wishlist: user.wishlist || [],
+        createdAt: user.createdAt,
       },
     });
   } catch (error) {
+    console.error("Login error:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Failed to log in",

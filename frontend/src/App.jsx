@@ -26,6 +26,7 @@ import Contact from "./pages/Contact";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
+import AuthModal from "./components/common/AuthModal";
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
         <WishlistProvider>
           <BrowserRouter>
             <ScrollToTop />
+            <AuthModal />
             <Routes>
               {/* Home */}
               <Route path="/" element={<Home />} />

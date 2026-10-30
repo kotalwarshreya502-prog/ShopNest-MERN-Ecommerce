@@ -19,6 +19,17 @@ export const AuthProvider = ({ children }) => {
 
   const [loading, setLoading] = useState(true);
 
+  // Authentication popup modal state
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [pendingCartItem, setPendingCartItem] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("shopnest_pending_cart_item");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
   // Sync token to api service and localStorage
   useEffect(() => {
     if (token) {
@@ -37,6 +48,31 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, [user]);
 
+  // Sync pendingCartItem to sessionStorage
+  useEffect(() => {
+    if (pendingCartItem) {
+      sessionStorage.setItem("shopnest_pending_cart_item", JSON.stringify(pendingCartItem));
+    } else {
+      sessionStorage.removeItem("shopnest_pending_cart_item");
+    }
+  }, [pendingCartItem]);
+
+  const openAuthModal = (item = null) => {
+    if (item) {
+      setPendingCartItem(item);
+    }
+    setAuthModalOpen(true);
+  };
+
+  const closeAuthModal = () => {
+    setAuthModalOpen(false);
+  };
+
+  const clearPendingCartItem = () => {
+    setPendingCartItem(null);
+    sessionStorage.removeItem("shopnest_pending_cart_item");
+  };
+
   const login = (userData, authToken) => {
     setUser(userData);
     setToken(authToken);
@@ -47,8 +83,12 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     setToken(null);
+    clearPendingCartItem();
     localStorage.removeItem("shopnest_user");
     localStorage.removeItem("shopnest_token");
+    localStorage.removeItem("shopnest_cart");
+    localStorage.removeItem("shopnest_wishlist");
+    localStorage.removeItem("shopnest_coupon");
   };
 
   const updateUser = (updatedData) => {
@@ -70,6 +110,12 @@ export const AuthProvider = ({ children }) => {
         logout,
         updateUser,
         loading,
+        authModalOpen,
+        openAuthModal,
+        closeAuthModal,
+        pendingCartItem,
+        setPendingCartItem,
+        clearPendingCartItem,
       }}
     >
       {children}

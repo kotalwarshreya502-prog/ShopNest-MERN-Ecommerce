@@ -15,12 +15,14 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/common/Navbar";
 import Footer from "../components/common/Footer";
 import api from "../services/api";
 
 export default function Cart() {
   const navigate = useNavigate();
+  const { isAuthenticated, openAuthModal } = useAuth();
   const {
     items,
     subtotal,
@@ -281,7 +283,13 @@ export default function Cart() {
               {/* Checkout CTA */}
               <button
                 className="btn-primary btn-checkout-main"
-                onClick={() => navigate("/checkout")}
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    openAuthModal();
+                    return;
+                  }
+                  navigate("/checkout");
+                }}
               >
                 Proceed to Checkout <ArrowRight size={18} />
               </button>

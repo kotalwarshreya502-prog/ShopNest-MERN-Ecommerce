@@ -1,6 +1,34 @@
 const Product = require("../models/product");
 const Review = require("../models/Review");
 
+// Intelligent category synonym mapping to prevent empty category pages
+const CATEGORY_SYNONYMS = {
+  kitchen: ["Kitchen", "Kitchen Products", "Kitchen & Dining", "Cookware", "Kitchen Appliances"],
+  "kitchen-products": ["Kitchen Products", "Kitchen", "Kitchen & Dining", "Cookware", "Kitchen Appliances"],
+  "home-accessories": ["Home Accessories", "Home & Living", "Accessories", "Home Decor", "Decor"],
+  "home accessories": ["Home Accessories", "Home & Living", "Accessories", "Home Decor", "Decor"],
+  "home-living": ["Home & Living", "Home Accessories", "Furniture", "Home Decor"],
+  "home & living": ["Home & Living", "Home Accessories", "Furniture", "Home Decor"],
+  toys: ["Toys", "Toys & Games", "Toys & Lifestyle"],
+  lifestyle: ["Lifestyle", "Toys & Lifestyle", "Travel & Lifestyle"],
+  "toys-lifestyle": ["Toys & Lifestyle", "Toys", "Lifestyle", "Toys & Games"],
+  gaming: ["Gaming", "Video Games", "Gamers"],
+  fashion: ["Fashion", "Clothing", "Apparel", "Wear"],
+  beauty: ["Beauty", "Beauty & Personal Care", "Skincare", "Personal Care"],
+  sports: ["Sports", "Sports & Fitness", "Fitness"],
+  "sports-fitness": ["Sports & Fitness", "Sports", "Fitness"],
+  books: ["Books", "Books & Stationery", "Stationery"],
+  "books-stationery": ["Books & Stationery", "Books", "Stationery"],
+  footwear: ["Footwear", "Shoes", "Sneakers"],
+  watches: ["Watches", "Timepieces"],
+  accessories: ["Accessories", "Home Accessories", "Mobiles & Accessories"],
+  mobiles: ["Mobiles & Accessories", "Smartphones", "Mobiles"],
+  "mobiles-accessories": ["Mobiles & Accessories", "Smartphones", "Mobiles"],
+  laptops: ["Laptops & Computers", "Laptops", "Computers"],
+  "laptops-computers": ["Laptops & Computers", "Laptops", "Computers"],
+  electronics: ["Electronics", "Audio", "Cameras"],
+};
+
 // @desc    Fetch all products with search, filter, sort & pagination
 // @route   GET /api/products
 // @access  Public
@@ -26,21 +54,30 @@ const getProducts = async (req, res) => {
       ];
     }
 
-    // Category filter (flexible slug or exact matching)
+    // Category filter (flexible slug or exact matching with synonym expansion)
     if (req.query.category && req.query.category !== "All") {
       const catParam = req.query.category.trim();
+      const slugKey = catParam.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
+      const synonyms = CATEGORY_SYNONYMS[slugKey] || CATEGORY_SYNONYMS[catParam.toLowerCase()] || [];
+
       const sanitized = catParam.replace(/[-_]+/g, "[ &-_]*");
-      const categoryOr = [
-        { category: new RegExp(`^${catParam}$`, "i") },
-        { category: new RegExp(`^${sanitized}$`, "i") },
-        { subcategory: new RegExp(`^${catParam}$`, "i") },
-        { subcategory: new RegExp(`^${sanitized}$`, "i") },
-      ];
-      if (query.$or) {
-        query.$and = [{ $or: query.$or }, { $or: categoryOr }];
+      const terms = Array.from(new Set([catParam, sanitized, ...synonyms]));
+
+      const categoryConditions = [];
+      terms.forEach((term) => {
+        const escaped = term.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&").replace(/\\\[ &-_\\\*\\\]\*/g, "[ &-_]*");
+        categoryConditions.push({ category: new RegExp(`^${escaped}$`, "i") });
+        categoryConditions.push({ category: new RegExp(`\\b${escaped}\\b`, "i") });
+        categoryConditions.push({ subcategory: new RegExp(`^${escaped}$`, "i") });
+      });
+
+      if (query.$and) {
+        query.$and.push({ $or: categoryConditions });
+      } else if (query.$or) {
+        query.$and = [{ $or: query.$or }, { $or: categoryConditions }];
         delete query.$or;
       } else {
-        query.$or = categoryOr;
+        query.$or = categoryConditions;
       }
     }
 
@@ -54,14 +91,27 @@ const getProducts = async (req, res) => {
       query.brand = new RegExp(`^${req.query.brand.trim()}$`, "i");
     }
 
-    // Price range (use discountPrice if available, else price)
+    // Price range (handles both discountPrice and regular price accurately)
     if (req.query.minPrice || req.query.maxPrice) {
       const priceQuery = {};
       if (req.query.minPrice) priceQuery.$gte = Number(req.query.minPrice);
       if (req.query.maxPrice) priceQuery.$lte = Number(req.query.maxPrice);
-      query.$or = query.$or || [];
-      // filter on effective selling price
-      query.discountPrice = priceQuery;
+
+      const priceConditions = [
+        { discountPrice: priceQuery },
+        {
+          $and: [
+            { $or: [{ discountPrice: null }, { discountPrice: { $exists: false } }, { discountPrice: 0 }] },
+            { price: priceQuery },
+          ],
+        },
+      ];
+
+      if (query.$and) {
+        query.$and.push({ $or: priceConditions });
+      } else {
+        query.$and = [{ $or: priceConditions }];
+      }
     }
 
     // Rating filter

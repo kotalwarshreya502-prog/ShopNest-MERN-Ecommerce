@@ -1,8 +1,12 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { useAuth } from "./AuthContext";
+import api from "../services/api";
 
 const CartContext = createContext(null);
 
 export const CartProvider = ({ children }) => {
+  const { isAuthenticated, openAuthModal } = useAuth();
+
   const [items, setItems] = useState(() => {
     try {
       const saved = localStorage.getItem("shopnest_cart");
@@ -11,6 +15,8 @@ export const CartProvider = ({ children }) => {
       return [];
     }
   });
+
+  const [loadingCart, setLoadingCart] = useState(false);
 
   const [coupon, setCoupon] = useState(() => {
     try {
@@ -21,8 +27,36 @@ export const CartProvider = ({ children }) => {
     }
   });
 
+  // Fetch Cart from MongoDB Atlas whenever user becomes authenticated
+  const fetchCartFromDB = useCallback(async () => {
+    if (!isAuthenticated) {
+      setItems([]);
+      return;
+    }
+    setLoadingCart(true);
+    try {
+      const res = await api.get("/cart");
+      if (res.data.success && res.data.cart?.items) {
+        setItems(res.data.cart.items);
+        localStorage.setItem("shopnest_cart", JSON.stringify(res.data.cart.items));
+      }
+    } catch (err) {
+      console.warn("Could not load cart from MongoDB:", err.message);
+    } finally {
+      setLoadingCart(false);
+    }
+  }, [isAuthenticated]);
+
   useEffect(() => {
-    localStorage.setItem("shopnest_cart", JSON.stringify(items));
+    fetchCartFromDB();
+  }, [fetchCartFromDB]);
+
+  useEffect(() => {
+    if (items && items.length > 0) {
+      localStorage.setItem("shopnest_cart", JSON.stringify(items));
+    } else {
+      localStorage.removeItem("shopnest_cart");
+    }
   }, [items]);
 
   useEffect(() => {
@@ -33,51 +67,110 @@ export const CartProvider = ({ children }) => {
     }
   }, [coupon]);
 
-  const addToCart = (product, qty = 1) => {
+  // Add to cart with guest protection
+  const addToCart = async (product, qty = 1) => {
     const quantity = Math.max(1, parseInt(qty, 10) || 1);
-    const maxStock = product.stock !== undefined ? product.stock : 999;
 
-    setItems((prevItems) => {
-      const existingIndex = prevItems.findIndex(
-        (item) => String(item._id) === String(product._id)
-      );
+    // If guest, show professional login/register popup and do not add to cart yet
+    if (!isAuthenticated) {
+      openAuthModal({ product, quantity });
+      return { success: false, requireAuth: true };
+    }
 
-      if (existingIndex > -1) {
-        const currentQty = prevItems[existingIndex].quantity || 1;
-        const newQty = Math.min(maxStock, currentQty + quantity);
-        const updated = [...prevItems];
-        updated[existingIndex] = {
-          ...updated[existingIndex],
-          quantity: newQty,
+    // For authenticated users, persist directly to MongoDB Atlas
+    try {
+      const res = await api.post("/cart/add", {
+        productId: product._id,
+        quantity,
+      });
+
+      if (res.data.success && res.data.cart) {
+        setItems(res.data.cart.items);
+        return {
+          success: true,
+          message: res.data.message || "Your product has been successfully added to your cart!",
         };
-        return updated;
-      } else {
-        const itemToAdd = {
-          _id: product._id,
-          name: product.name,
-          price: Number(product.discountPrice || product.price),
-          originalPrice: product.discountPrice ? Number(product.price) : Number(product.originalPrice || product.price),
-          image: product.image || (product.images && product.images[0]) || "",
-          category: product.category || "General",
-          brand: product.brand || "",
-          stock: maxStock,
-          quantity: Math.min(maxStock, quantity),
-        };
-        return [...prevItems, itemToAdd];
       }
-    });
+    } catch (err) {
+      console.error("Cart addition failed:", err);
+      // Fallback local update
+      setItems((prev) => {
+        const idx = prev.findIndex((i) => String(i.product || i._id) === String(product._id));
+        if (idx > -1) {
+          const updated = [...prev];
+          updated[idx].quantity = (updated[idx].quantity || 1) + quantity;
+          return updated;
+        }
+        return [
+          ...prev,
+          {
+            _id: product._id,
+            product: product._id,
+            name: product.name,
+            price: Number(product.discountPrice || product.price),
+            originalPrice: Number(product.price),
+            image: product.image || (product.images && product.images[0]) || "",
+            category: product.category || "General",
+            brand: product.brand || "",
+            quantity,
+            stock: product.stock || 999,
+          },
+        ];
+      });
+      return { success: true, message: "Your product has been successfully added to your cart!" };
+    }
   };
 
-  const updateQuantity = (productId, newQty) => {
+  // Automatically add pending product to MongoDB cart after successful login or registration
+  const addPendingItemToCart = async (pendingItem) => {
+    if (!pendingItem || !pendingItem.product) return null;
+    const prod = pendingItem.product;
+    const prodId = prod._id || prod;
+    const quantity = pendingItem.quantity || 1;
+
+    try {
+      const res = await api.post("/cart/add", {
+        productId: prodId,
+        quantity,
+      });
+
+      if (res.data.success && res.data.cart) {
+        setItems(res.data.cart.items);
+        return {
+          success: true,
+          message: "Your product has been successfully added to your cart!",
+        };
+      }
+    } catch (err) {
+      console.error("Failed to add pending product to cart:", err);
+    }
+    return null;
+  };
+
+  const updateQuantity = async (productId, newQty) => {
     const qty = parseInt(newQty, 10);
     if (isNaN(qty) || qty <= 0) {
-      removeFromCart(productId);
-      return;
+      return removeFromCart(productId);
+    }
+
+    if (isAuthenticated) {
+      try {
+        const res = await api.put("/cart/update", {
+          productId,
+          quantity: qty,
+        });
+        if (res.data.success && res.data.cart) {
+          setItems(res.data.cart.items);
+          return;
+        }
+      } catch (err) {
+        console.error("Update quantity failed in DB:", err);
+      }
     }
 
     setItems((prevItems) =>
       prevItems.map((item) => {
-        if (String(item._id) === String(productId)) {
+        if (String(item.product || item._id) === String(productId)) {
           const validQty = Math.min(item.stock || 999, Math.max(1, qty));
           return { ...item, quantity: validQty };
         }
@@ -86,13 +179,33 @@ export const CartProvider = ({ children }) => {
     );
   };
 
-  const removeFromCart = (productId) => {
+  const removeFromCart = async (productId) => {
+    if (isAuthenticated) {
+      try {
+        const res = await api.delete(`/cart/remove/${productId}`);
+        if (res.data.success && res.data.cart) {
+          setItems(res.data.cart.items);
+          return;
+        }
+      } catch (err) {
+        console.error("Remove item failed in DB:", err);
+      }
+    }
+
     setItems((prevItems) =>
-      prevItems.filter((item) => String(item._id) !== String(productId))
+      prevItems.filter((item) => String(item.product || item._id) !== String(productId))
     );
   };
 
-  const clearCart = () => {
+  const clearCart = async () => {
+    if (isAuthenticated) {
+      try {
+        await api.delete("/cart/clear");
+      } catch (err) {
+        console.error("Clear cart failed in DB:", err);
+      }
+    }
+
     setItems([]);
     setCoupon(null);
     localStorage.removeItem("shopnest_cart");
@@ -150,12 +263,15 @@ export const CartProvider = ({ children }) => {
         discount,
         grandTotal,
         coupon,
+        loadingCart,
         addToCart,
+        addPendingItemToCart,
         updateQuantity,
         removeFromCart,
         clearCart,
         applyCouponCode,
         removeCoupon,
+        fetchCartFromDB,
       }}
     >
       {children}
