@@ -1,32 +1,29 @@
 const Product = require("../models/product");
 const Review = require("../models/Review");
 
-// Intelligent category synonym mapping to prevent empty category pages
+// Strict category mapping to guarantee zero cross-category contamination
 const CATEGORY_SYNONYMS = {
-  kitchen: ["Kitchen", "Kitchen Products", "Kitchen & Dining", "Cookware", "Kitchen Appliances"],
-  "kitchen-products": ["Kitchen Products", "Kitchen", "Kitchen & Dining", "Cookware", "Kitchen Appliances"],
-  "home-accessories": ["Home Accessories", "Home & Living", "Accessories", "Home Decor", "Decor"],
-  "home accessories": ["Home Accessories", "Home & Living", "Accessories", "Home Decor", "Decor"],
-  "home-living": ["Home & Living", "Home Accessories", "Furniture", "Home Decor"],
-  "home & living": ["Home & Living", "Home Accessories", "Furniture", "Home Decor"],
-  toys: ["Toys", "Toys & Games", "Toys & Lifestyle"],
-  lifestyle: ["Lifestyle", "Toys & Lifestyle", "Travel & Lifestyle"],
-  "toys-lifestyle": ["Toys & Lifestyle", "Toys", "Lifestyle", "Toys & Games"],
-  gaming: ["Gaming", "Video Games", "Gamers"],
-  fashion: ["Fashion", "Clothing", "Apparel", "Wear"],
-  beauty: ["Beauty", "Beauty & Personal Care", "Skincare", "Personal Care"],
-  sports: ["Sports", "Sports & Fitness", "Fitness"],
-  "sports-fitness": ["Sports & Fitness", "Sports", "Fitness"],
-  books: ["Books", "Books & Stationery", "Stationery"],
-  "books-stationery": ["Books & Stationery", "Books", "Stationery"],
-  footwear: ["Footwear", "Shoes", "Sneakers"],
-  watches: ["Watches", "Timepieces"],
-  accessories: ["Accessories", "Home Accessories", "Mobiles & Accessories"],
-  mobiles: ["Mobiles & Accessories", "Smartphones", "Mobiles"],
-  "mobiles-accessories": ["Mobiles & Accessories", "Smartphones", "Mobiles"],
-  laptops: ["Laptops & Computers", "Laptops", "Computers"],
-  "laptops-computers": ["Laptops & Computers", "Laptops", "Computers"],
-  electronics: ["Electronics", "Audio", "Cameras"],
+  mobiles: ["Mobiles"],
+  "mobiles-accessories": ["Mobiles"],
+  smartphones: ["Mobiles"],
+  laptops: ["Laptops"],
+  "laptops-computers": ["Laptops"],
+  gaming: ["Gaming"],
+  fashion: ["Fashion"],
+  footwear: ["Footwear"],
+  shoes: ["Footwear"],
+  sneakers: ["Footwear"],
+  watches: ["Watches"],
+  accessories: ["Accessories"],
+  electronics: ["Electronics"],
+  "home-living": ["Home & Living"],
+  "home & living": ["Home & Living"],
+  "kitchen-products": ["Kitchen Products"],
+  kitchen: ["Kitchen Products"],
+  beauty: ["Beauty"],
+  sports: ["Sports"],
+  books: ["Books"],
+  "toys-lifestyle": ["Toys & Lifestyle"],
 };
 
 // @desc    Fetch all products with search, filter, sort & pagination
@@ -54,21 +51,16 @@ const getProducts = async (req, res) => {
       ];
     }
 
-    // Category filter (flexible slug or exact matching with synonym expansion)
+    // Category filter (strict exact category matching to prevent cross-category leakage)
     if (req.query.category && req.query.category !== "All") {
       const catParam = req.query.category.trim();
       const slugKey = catParam.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
-      const synonyms = CATEGORY_SYNONYMS[slugKey] || CATEGORY_SYNONYMS[catParam.toLowerCase()] || [];
-
-      const sanitized = catParam.replace(/[-_]+/g, "[ &-_]*");
-      const terms = Array.from(new Set([catParam, sanitized, ...synonyms]));
+      const mappedCategories = CATEGORY_SYNONYMS[slugKey] || CATEGORY_SYNONYMS[catParam.toLowerCase()] || [catParam];
 
       const categoryConditions = [];
-      terms.forEach((term) => {
-        const escaped = term.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&").replace(/\\\[ &-_\\\*\\\]\*/g, "[ &-_]*");
+      mappedCategories.forEach((targetCat) => {
+        const escaped = targetCat.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
         categoryConditions.push({ category: new RegExp(`^${escaped}$`, "i") });
-        categoryConditions.push({ category: new RegExp(`\\b${escaped}\\b`, "i") });
-        categoryConditions.push({ subcategory: new RegExp(`^${escaped}$`, "i") });
       });
 
       if (query.$and) {
@@ -221,16 +213,37 @@ const getProductById = async (req, res) => {
   }
 };
 
-// @desc    Fetch featured, trending, bestsellers & new arrivals for homepage
+// @desc    Fetch featured, trending, bestsellers, new arrivals & category sections for homepage
 // @route   GET /api/products/featured
 // @access  Public
 const getFeaturedProducts = async (req, res) => {
   try {
-    const [featured, trending, bestsellers, newArrivals] = await Promise.all([
+    const [
+      featured,
+      trending,
+      bestsellers,
+      newArrivals,
+      mobiles,
+      laptops,
+      gaming,
+      fashion,
+      footwear,
+      watches,
+      accessories,
+      deals,
+    ] = await Promise.all([
       Product.find({ isFeatured: true }).sort({ ratings: -1 }).limit(10).lean(),
       Product.find({ stock: { $gt: 0 } }).sort({ ratings: -1, numReviews: -1 }).limit(10).lean(),
       Product.find({ isBestseller: true }).sort({ numReviews: -1 }).limit(10).lean(),
       Product.find({ isNewArrival: true }).sort({ createdAt: -1 }).limit(8).lean(),
+      Product.find({ category: { $regex: /^mobiles$/i } }).sort({ ratings: -1 }).limit(8).lean(),
+      Product.find({ category: { $regex: /^laptops$/i } }).sort({ ratings: -1 }).limit(8).lean(),
+      Product.find({ category: { $regex: /^gaming$/i } }).sort({ ratings: -1 }).limit(8).lean(),
+      Product.find({ category: { $regex: /^fashion$/i } }).sort({ ratings: -1 }).limit(8).lean(),
+      Product.find({ category: { $regex: /^footwear$/i } }).sort({ ratings: -1 }).limit(8).lean(),
+      Product.find({ category: { $regex: /^watches$/i } }).sort({ ratings: -1 }).limit(8).lean(),
+      Product.find({ category: { $regex: /^accessories$/i } }).sort({ ratings: -1 }).limit(8).lean(),
+      Product.find({ discountPrice: { $ne: null, $gt: 0 } }).sort({ ratings: -1 }).limit(8).lean(),
     ]);
 
     res.json({
@@ -239,6 +252,14 @@ const getFeaturedProducts = async (req, res) => {
       trending,
       bestsellers: bestsellers.length ? bestsellers : trending,
       newArrivals: newArrivals.length ? newArrivals : featured.slice(0, 4),
+      mobiles,
+      laptops,
+      gaming,
+      fashion,
+      footwear,
+      watches,
+      accessories,
+      deals: deals.length ? deals : trending.slice(0, 8),
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

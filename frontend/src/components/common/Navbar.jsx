@@ -11,14 +11,14 @@ import { useWishlist } from "../../context/WishlistContext";
 import AnnouncementBar from "./AnnouncementBar";
 
 const CATEGORIES = [
-  { label: "Electronics", slug: "electronics", icon: "🔌" },
-  { label: "Mobiles", slug: "mobiles-accessories", icon: "📱" },
-  { label: "Laptops", slug: "laptops-computers", icon: "💻" },
+  { label: "Mobiles", slug: "mobiles", icon: "📱" },
+  { label: "Laptops", slug: "laptops", icon: "💻" },
   { label: "Gaming", slug: "gaming", icon: "🎮" },
   { label: "Fashion", slug: "fashion", icon: "👗" },
   { label: "Footwear", slug: "footwear", icon: "👟" },
   { label: "Watches", slug: "watches", icon: "⌚" },
   { label: "Accessories", slug: "accessories", icon: "👜" },
+  { label: "Electronics", slug: "electronics", icon: "🔌" },
   { label: "Home & Living", slug: "home-living", icon: "🏠" },
   { label: "Kitchen", slug: "kitchen-products", icon: "🍳" },
   { label: "Beauty", slug: "beauty", icon: "✨" },

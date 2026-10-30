@@ -23,3 +23,4 @@ const wishlistSchema = new mongoose.Schema(
 
 module.exports =
   mongoose.models.Wishlist || mongoose.model("Wishlist", wishlistSchema);
+

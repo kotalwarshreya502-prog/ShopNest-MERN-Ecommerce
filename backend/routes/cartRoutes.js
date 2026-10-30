@@ -21,3 +21,4 @@ router.delete("/", protect, clearCart);
 router.post("/sync", protect, syncCart);
 
 module.exports = router;
+

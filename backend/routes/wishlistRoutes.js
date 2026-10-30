@@ -16,3 +16,4 @@ router.delete("/:productId", protect, removeFromWishlist);
 router.post("/move-to-cart/:productId", protect, moveToCart);
 
 module.exports = router;
+
