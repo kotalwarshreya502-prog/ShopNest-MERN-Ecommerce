@@ -3,11 +3,15 @@ import axios from "axios";
 // Intelligently resolve the API base URL for Render or local development
 const getApiBaseUrl = () => {
   const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
-  if (!envUrl) {
-    return "http://localhost:5000/api";
+  if (envUrl) {
+    const cleanUrl = envUrl.trim().replace(/\/+$/, "");
+    return cleanUrl.endsWith("/api") ? cleanUrl : `${cleanUrl}/api`;
   }
-  const cleanUrl = envUrl.trim().replace(/\/+$/, "");
-  return cleanUrl.endsWith("/api") ? cleanUrl : `${cleanUrl}/api`;
+  // Production fallback when running in browser on non-localhost domain
+  if (typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+    return "https://shopnest-backend-6ayj.onrender.com/api";
+  }
+  return "http://localhost:5000/api";
 };
 
 const api = axios.create({

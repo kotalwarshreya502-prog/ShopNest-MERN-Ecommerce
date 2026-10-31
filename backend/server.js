@@ -4,6 +4,7 @@ const path = require("path");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
+const mongoose = require("mongoose");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 
 const connectDB = require("./config/db");
@@ -97,6 +98,7 @@ const healthHandler = (req, res) => {
   res.json({
     success: true,
     message: "ShopNest API is running",
+    database: mongoose.connection?.name || "unknown",
     env: process.env.NODE_ENV || "development",
     timestamp: new Date().toISOString(),
   });
